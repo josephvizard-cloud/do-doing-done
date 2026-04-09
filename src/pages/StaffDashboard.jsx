@@ -12,8 +12,8 @@ const FILTERS = [
   { id: 'hebert',   label: 'Hebert',   icon: '⛲' },
 ];
 
-export default function StaffDashboard() {
-  const [filter, setFilter] = useState('all');
+export default function StaffDashboard({ staffFilter = 'all', staffName = 'Staff', onLogout }) {
+  const [filter, setFilter] = useState(staffFilter !== 'all' ? staffFilter : 'all');
   const [view, setView] = useState('active');
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -63,7 +63,10 @@ export default function StaffDashboard() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
           <div>
             <h1 style={{ fontSize: 22, fontWeight: 800, color: '#fff', margin: 0, letterSpacing: -0.5, fontFamily: font }}>Do, Doing, Done.</h1>
-            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', margin: '2px 0 0', fontWeight: 500 }}>Staff Dashboard</p>
+            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', margin: '2px 0 0', fontWeight: 500 }}>
+              Logged in: {staffName}
+              {onLogout && <span onClick={onLogout} style={{ marginLeft: 8, color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: 11 }}>Log out</span>}
+            </p>
           </div>
           <div style={{ background: 'rgba(240,101,47,0.9)', borderRadius: 14, padding: '8px 14px', textAlign: 'center' }}>
             <span style={{ fontSize: 22, fontWeight: 800, color: '#fff', lineHeight: 1, display: 'block' }}>{activeCount}</span>

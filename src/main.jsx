@@ -8,6 +8,7 @@ style.textContent = `
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { background: #FAFBFC; -webkit-font-smoothing: antialiased; }
   @keyframes cfall { 0% { transform: translateY(0) rotate(0deg); opacity: 1; } 100% { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
+  @keyframes pinShake { 0%,100% { transform: translateX(0); } 20%,60% { transform: translateX(-8px); } 40%,80% { transform: translateX(8px); } }
   button:hover { filter: brightness(1.05); }
   button:active { transform: scale(0.97) !important; }
   textarea:focus, input:focus { border-color: #2B6CB0 !important; }

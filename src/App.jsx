@@ -7,6 +7,7 @@ import CategoryPick from './pages/CategoryPick';
 import ReportDetails from './pages/ReportDetails';
 import Confirmation from './pages/Confirmation';
 import StaffDashboard from './pages/StaffDashboard';
+import StaffPinGate from './components/StaffPinGate';
 
 function StatusBar() {
   return (
@@ -24,10 +25,11 @@ function StatusBar() {
 }
 
 export default function App() {
-  const [role, setRole] = useState('resident'); // resident | staff
+  const [role, setRole] = useState('resident');
   const [screen, setScreen] = useState('home');
   const [category, setCategory] = useState(null);
   const [ticket, setTicket] = useState(null);
+  const [staffAuth, setStaffAuth] = useState(null);
 
   const goHome = () => {
     setScreen('home');
@@ -35,9 +37,19 @@ export default function App() {
     setTicket(null);
   };
 
+  const handleRoleSwitch = (newRole) => {
+    setRole(newRole);
+    if (newRole === 'resident') goHome();
+  };
+
+  const handleStaffLogout = () => {
+    setStaffAuth(null);
+    setRole('resident');
+    goHome();
+  };
+
   const handleSubmit = async (details) => {
     try {
-      // Try submitting to Supabase
       const saved = await submitTicket({
         categoryId: category.id,
         address: details.address,
@@ -49,7 +61,6 @@ export default function App() {
       setTicket(saved);
     } catch (err) {
       console.error('Supabase submit failed, using local fallback:', err);
-      // Fallback: create ticket locally so the flow still works
       setTicket({
         id: generateTicketId(),
         category_id: category.id,
@@ -76,7 +87,7 @@ export default function App() {
           { id: 'resident', label: '👤 Resident' },
           { id: 'staff', label: '👷 Staff' },
         ].map(r => (
-          <button key={r.id} onClick={() => { setRole(r.id); if (r.id === 'resident') goHome(); }} style={{
+          <button key={r.id} onClick={() => handleRoleSwitch(r.id)} style={{
             flex: 1, padding: '10px 0', borderRadius: 8,
             background: role === r.id ? '#fff' : 'transparent',
             border: 'none', fontSize: 14, fontWeight: 700,
@@ -97,10 +108,26 @@ export default function App() {
             {screen === 'home' && <ResidentHome onStart={() => setScreen('category')} />}
             {screen === 'category' && <CategoryPick onSelect={c => { setCategory(c); setScreen('details'); }} onBack={goHome} />}
             {screen === 'details' && category && <ReportDetails category={category} onSubmit={handleSubmit} onBack={() => setScreen('category')} />}
-            {screen === 'confirm' && category && ticket && <Confirmation ticket={ticket} category={category} onDone={goHome} onViewStaff={() => setRole('staff')} />}
+            {screen === 'confirm' && category && ticket && (
+              <Confirmation
+                ticket={ticket}
+                category={category}
+                onDone={goHome}
+                onViewStaff={() => { setStaffAuth({ name: 'Demo', headId: 'all' }); setRole('staff'); }}
+              />
+            )}
           </>
         )}
-        {role === 'staff' && <StaffDashboard />}
+        {role === 'staff' && !staffAuth && (
+          <StaffPinGate onAuth={setStaffAuth} />
+        )}
+        {role === 'staff' && staffAuth && (
+          <StaffDashboard
+            staffFilter={staffAuth.headId}
+            staffName={staffAuth.name}
+            onLogout={handleStaffLogout}
+          />
+        )}
       </div>
     </div>
   );
