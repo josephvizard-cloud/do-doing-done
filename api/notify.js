@@ -111,8 +111,8 @@ export default async function handler(req, res) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'Do, Doing, Done <notifications@do-doing-done.vercel.app>',
-        to: [head.email],
+        from: 'Do, Doing, Done <onboarding@resend.dev>',
+        to: ["josephvizard@gmail.com"],
         subject,
         html,
       }),
