@@ -2,11 +2,13 @@ import { useState, useRef } from 'react';
 import { DEPT_HEADS } from '../config/routing';
 import { uploadPhoto } from '../lib/tickets';
 import { font, colors, shared } from '../config/styles';
+import DuplicateCheck from '../components/DuplicateCheck';
 
 export default function ReportDetails({ category, onSubmit, onBack }) {
   const [photos, setPhotos] = useState([]);       // { file, preview, url }
   const [desc, setDesc] = useState('');
   const [address, setAddress] = useState('');
+  const [reporterEmail, setReporterEmail] = useState('');
   const [coords, setCoords] = useState(null);
   const [locating, setLocating] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -75,11 +77,12 @@ export default function ReportDetails({ category, onSubmit, onBack }) {
         description: desc,
         photoUrls,
         photoCount: photos.length,
+        reporterEmail,
       });
     } catch (err) {
       console.error('Submit error:', err);
       // Submit anyway with local data
-      onSubmit({ address, description: desc, photoUrls: [], photoCount: photos.length });
+      onSubmit({ address, description: desc, photoUrls: [], photoCount: photos.length, reporterEmail });
     }
     setUploading(false);
   };
@@ -105,6 +108,9 @@ export default function ReportDetails({ category, onSubmit, onBack }) {
           ⚠️ Water/sewer issues are prioritized. Expected response: 1–2 business days.
         </div>
       )}
+
+      {/* Duplicate detection */}
+      <DuplicateCheck categoryId={category.id} address={address} />
 
       {/* Location */}
       <div style={{ marginBottom: 18 }}>
@@ -150,7 +156,7 @@ export default function ReportDetails({ category, onSubmit, onBack }) {
       {/* Contact (optional) */}
       <div style={{ marginBottom: 18 }}>
         <label style={shared.label}>📧 Email for updates <span style={shared.optional}>(optional)</span></label>
-        <input type="email" placeholder="you@email.com" style={{ width: '100%', padding: '12px 14px', borderRadius: 12, border: `2px solid ${colors.grayBorder}`, fontSize: 14, fontFamily: font, color: colors.navy, boxSizing: 'border-box', outline: 'none' }} />
+        <input type="email" value={reporterEmail} onChange={e => setReporterEmail(e.target.value)} placeholder="you@email.com" style={{ width: '100%', padding: '12px 14px', borderRadius: 12, border: `2px solid ${colors.grayBorder}`, fontSize: 14, fontFamily: font, color: colors.navy, boxSizing: 'border-box', outline: 'none' }} />
       </div>
 
       <button onClick={handleSubmit} disabled={uploading} style={{ ...shared.submitBtn, opacity: uploading ? 0.7 : 1 }}>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { font, colors } from '../config/styles';
 
-export default function ResidentHome({ onStart }) {
+export default function ResidentHome({ onStart, onMyReports }) {
   const [pulse, setPulse] = useState(false);
   useEffect(() => { const t = setInterval(() => setPulse(p => !p), 2200); return () => clearInterval(t); }, []);
 
@@ -46,7 +46,7 @@ export default function ResidentHome({ onStart }) {
         </div>
 
         {/* My Reports */}
-        <button style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 12, padding: '12px 24px', color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontFamily: font }}>
+        <button onClick={onMyReports} style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 12, padding: '12px 24px', color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontFamily: font }}>
           <span>📂</span> My Reports
         </button>
 

@@ -115,6 +115,32 @@ export async function fetchMyTickets(email) {
   return data || [];
 }
 
+// ─── Duplicate Detection ───────────────────────────────────
+// Finds open tickets in the same category near the same address
+export async function findDuplicates(categoryId, address) {
+  try {
+    const { data, error } = await supabase
+      .from('tickets')
+      .select('id, category_id, address, description, created_at, status')
+      .eq('category_id', categoryId)
+      .in('status', ['new', 'assigned', 'on_site'])
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    if (error || !data) return [];
+
+    // Simple text match — check if addresses share key words
+    const inputWords = address.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 2);
+    return data.filter(t => {
+      const ticketWords = t.address.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/);
+      const matches = inputWords.filter(w => ticketWords.includes(w));
+      return matches.length >= 2; // At least 2 words in common (e.g. "Moody" + "St")
+    });
+  } catch {
+    return [];
+  }
+}
+
 // ─── Subscribe to real-time ticket updates ─────────────────
 export function subscribeToTickets(callback) {
   const channel = supabase

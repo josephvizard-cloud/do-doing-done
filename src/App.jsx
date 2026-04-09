@@ -6,8 +6,10 @@ import ResidentHome from './pages/ResidentHome';
 import CategoryPick from './pages/CategoryPick';
 import ReportDetails from './pages/ReportDetails';
 import Confirmation from './pages/Confirmation';
+import MyReports from './pages/MyReports';
 import StaffDashboard from './pages/StaffDashboard';
 import StaffPinGate from './components/StaffPinGate';
+import InstallPrompt from './components/InstallPrompt';
 
 function StatusBar() {
   return (
@@ -57,6 +59,7 @@ export default function App() {
         longitude: details.longitude,
         description: details.description,
         photoUrls: details.photoUrls,
+        reporterEmail: details.reporterEmail,
       });
       setTicket(saved);
     } catch (err) {
@@ -105,7 +108,8 @@ export default function App() {
       <div style={{ minHeight: 'calc(100vh - 80px)', display: 'flex', flexDirection: 'column' }}>
         {role === 'resident' && (
           <>
-            {screen === 'home' && <ResidentHome onStart={() => setScreen('category')} />}
+            {screen === 'home' && <ResidentHome onStart={() => setScreen('category')} onMyReports={() => setScreen('myreports')} />}
+            {screen === 'myreports' && <MyReports onBack={goHome} />}
             {screen === 'category' && <CategoryPick onSelect={c => { setCategory(c); setScreen('details'); }} onBack={goHome} />}
             {screen === 'details' && category && <ReportDetails category={category} onSubmit={handleSubmit} onBack={() => setScreen('category')} />}
             {screen === 'confirm' && category && ticket && (
@@ -129,6 +133,9 @@ export default function App() {
           />
         )}
       </div>
+
+      {/* PWA Install Prompt */}
+      <InstallPrompt />
     </div>
   );
 }
