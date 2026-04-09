@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { CATEGORIES, DEPT_HEADS, STATUSES } from '../config/routing';
 import { updateTicketStatus, uploadPhoto } from '../lib/tickets';
 import { font, colors } from '../config/styles';
+import { supabase } from '../lib/supabase';
 
 const ACTION_META = {
   new:      { next: 'assigned', btn: 'Assign to Me', bg: `linear-gradient(135deg, ${colors.yellow}, #B7791F)` },
@@ -10,7 +11,7 @@ const ACTION_META = {
   resolved: { next: null, btn: null, bg: null },
 };
 
-export default function TicketCard({ ticket, onUpdate }) {
+export default function TicketCard({ ticket, onUpdate, staffName }) {
   const cat = CATEGORIES.find(c => c.id === ticket.category_id) || CATEGORIES[CATEGORIES.length - 1];
   const head = DEPT_HEADS[cat.head];
   const status = STATUSES[ticket.status] || STATUSES.new;
@@ -18,6 +19,8 @@ export default function TicketCard({ ticket, onUpdate }) {
 
   const [expanded, setExpanded] = useState(false);
   const [showResolve, setShowResolve] = useState(false);
+  const [showAssign, setShowAssign] = useState(false);
+  const [assignName, setAssignName] = useState('');
   const [processing, setProcessing] = useState(false);
   const fileRef = useRef(null);
 
@@ -26,14 +29,32 @@ export default function TicketCard({ ticket, onUpdate }) {
       setShowResolve(true);
       return;
     }
+    if (action.next === 'assigned') {
+      // Assign to self by default
+      await handleAssign(staffName || head.name);
+      return;
+    }
     setProcessing(true);
     try {
       await updateTicketStatus(ticket.id, action.next);
       onUpdate(ticket.id, action.next);
-    } catch (err) {
-      // Fallback: update locally even if DB fails
+    } catch {
       onUpdate(ticket.id, action.next);
     }
+    setProcessing(false);
+  };
+
+  const handleAssign = async (name) => {
+    setProcessing(true);
+    try {
+      await supabase
+        .from('tickets')
+        .update({ status: 'assigned', assigned_to: name, assigned_at: new Date().toISOString() })
+        .eq('id', ticket.id);
+    } catch {}
+    onUpdate(ticket.id, 'assigned', name);
+    setShowAssign(false);
+    setAssignName('');
     setProcessing(false);
   };
 
@@ -73,10 +94,13 @@ export default function TicketCard({ ticket, onUpdate }) {
       </div>
 
       {/* Meta */}
-      <div style={{ display: 'flex', gap: 12, padding: '8px 14px 10px' }}>
+      <div style={{ display: 'flex', gap: 12, padding: '8px 14px 10px', flexWrap: 'wrap' }}>
         <span style={{ fontSize: 11, color: colors.grayLight }}>🕐 {timeAgo}</span>
         <span style={{ fontSize: 11, color: colors.grayLight }}>📸 {ticket.photo_urls?.length || 0}</span>
         <span style={{ fontSize: 11, color: colors.grayLight }}>{ticket.id}</span>
+        {ticket.assigned_to && (
+          <span style={{ fontSize: 11, color: colors.blue, fontWeight: 600 }}>👤 {ticket.assigned_to}</span>
+        )}
       </div>
 
       {/* Expanded */}
@@ -89,7 +113,12 @@ export default function TicketCard({ ticket, onUpdate }) {
             <span style={{ fontSize: 12, color: colors.grayLight, fontWeight: 600 }}>Routed to</span>
             <span style={{ fontSize: 12, color: colors.navy, fontWeight: 600 }}>{head.name}</span>
           </div>
-          {/* Photo thumbnails */}
+          {ticket.assigned_to && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
+              <span style={{ fontSize: 12, color: colors.grayLight, fontWeight: 600 }}>Assigned to</span>
+              <span style={{ fontSize: 12, color: colors.blue, fontWeight: 600 }}>{ticket.assigned_to}</span>
+            </div>
+          )}
           {ticket.photo_urls?.length > 0 && (
             <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
               {ticket.photo_urls.map((url, i) => (
@@ -100,9 +129,43 @@ export default function TicketCard({ ticket, onUpdate }) {
         </div>
       )}
 
+      {/* Assign to crew overlay */}
+      {showAssign && (
+        <div style={{ padding: '12px 14px', background: '#F7FAFC', borderTop: '1px solid #E8ECF1' }}>
+          <p style={{ fontSize: 14, fontWeight: 700, color: colors.navy, margin: '0 0 8px' }}>Send to crew member</p>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              type="text"
+              value={assignName}
+              onChange={e => setAssignName(e.target.value)}
+              placeholder="Name"
+              autoFocus
+              style={{
+                flex: 1, padding: '10px 12px', borderRadius: 10,
+                border: '2px solid #E8ECF1', fontSize: 14,
+                fontFamily: font, color: colors.navy, outline: 'none',
+              }}
+            />
+            <button
+              onClick={() => handleAssign(assignName || staffName || head.name)}
+              disabled={processing}
+              style={{
+                padding: '10px 16px', borderRadius: 10,
+                background: colors.navy, border: 'none',
+                color: '#fff', fontSize: 14, fontWeight: 700,
+                cursor: 'pointer', fontFamily: font,
+              }}
+            >
+              Go
+            </button>
+          </div>
+          <button onClick={() => setShowAssign(false)} style={{ marginTop: 8, background: 'none', border: 'none', color: colors.gray, fontSize: 12, cursor: 'pointer', fontFamily: font }}>Cancel</button>
+        </div>
+      )}
+
       {/* Resolve overlay */}
       {showResolve && (
-        <div style={{ padding: '12px 14px 14px', background: '#F7FAFC', borderTop: `1px solid ${colors.grayBorder}` }}>
+        <div style={{ padding: '12px 14px 14px', background: '#F7FAFC', borderTop: '1px solid #E8ECF1' }}>
           <p style={{ fontSize: 15, fontWeight: 700, color: colors.navy, margin: '0 0 4px' }}>📸 Take a completion photo</p>
           <p style={{ fontSize: 12, color: colors.gray, margin: '0 0 10px' }}>This photo auto-notifies the resident and closes the ticket.</p>
           <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) handleResolve(e.target.files[0]); }} />
@@ -113,15 +176,22 @@ export default function TicketCard({ ticket, onUpdate }) {
           <button onClick={() => handleResolve(null)} disabled={processing} style={{ width: '100%', padding: '12px', borderRadius: 10, background: `linear-gradient(135deg, ${colors.green}, ${colors.greenDk})`, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: font, marginBottom: 8 }}>
             {processing ? 'Closing...' : '✓ Resolved — Send to Resident'}
           </button>
-          <button onClick={() => setShowResolve(false)} style={{ width: '100%', padding: '10px', borderRadius: 10, background: 'transparent', border: `1px solid ${colors.grayBorder}`, color: colors.gray, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: font }}>Cancel</button>
+          <button onClick={() => setShowResolve(false)} style={{ width: '100%', padding: '10px', borderRadius: 10, background: 'transparent', border: '1px solid #E8ECF1', color: colors.gray, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: font }}>Cancel</button>
         </div>
       )}
 
-      {/* Action button */}
-      {action.next && !showResolve && (
-        <button onClick={handleNext} disabled={processing} style={{ width: 'calc(100% - 28px)', margin: '0 14px 14px', padding: '12px', borderRadius: 10, background: action.bg, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: font, boxShadow: '0 4px 12px rgba(0,0,0,0.12)', opacity: processing ? 0.7 : 1 }}>
-          {processing ? 'Updating...' : `${action.btn} →`}
-        </button>
+      {/* Action buttons */}
+      {action.next && !showResolve && !showAssign && (
+        <div style={{ padding: '0 14px 14px' }}>
+          <button onClick={handleNext} disabled={processing} style={{ width: '100%', padding: '12px', borderRadius: 10, background: action.bg, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: font, boxShadow: '0 4px 12px rgba(0,0,0,0.12)', opacity: processing ? 0.7 : 1 }}>
+            {processing ? 'Updating...' : `${action.btn} →`}
+          </button>
+          {ticket.status === 'new' && (
+            <button onClick={() => setShowAssign(true)} style={{ width: '100%', marginTop: 6, padding: '8px', borderRadius: 8, background: 'transparent', border: 'none', color: colors.blue, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: font }}>
+              Send to crew member instead →
+            </button>
+          )}
+        </div>
       )}
 
       {/* Resolved state */}
